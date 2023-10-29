@@ -4,4 +4,4 @@ import os
 
 
 df = pd.read_csv(r'updated_csv.csv')
-df.head()
+st.dataframe(df)
