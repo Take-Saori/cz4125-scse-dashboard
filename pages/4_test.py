@@ -1,12 +1,16 @@
-
 import streamlit as st
 import pandas as pd
-import os
 
-def file_selector(folder_path='.'):
-    filenames = os.listdir(folder_path)
-    selected_filename = st.selectbox('Select a file', filenames)
-    return os.path.join(folder_path, selected_filename)
 
-filename = file_selector()
-st.write('You selected `%s`' % filename)
+try:
+    st.write('Trying with back slashes')
+    st.dataframe(pd.read_csv(r'.\\data\\updated_csv.csv'))
+except:
+    st.write('It didn\'t work with back slashes.')
+
+
+try:
+    st.write('Trying with forward slashes')
+    st.dataframe(pd.read_csv(r'data/updated_csv.csv'))
+except:
+    st.write('It didn\'t work with forward slashes.')
