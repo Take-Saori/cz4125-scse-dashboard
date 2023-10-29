@@ -3,6 +3,5 @@ import pandas as pd
 import os
 
 
-path = os.path.dirname(__file__)
-my_file = path+'./data/updated_csv.csv'
-print(my_file)
+df = pd.read_csv('data/updated_csv.csv')
+df.head()
