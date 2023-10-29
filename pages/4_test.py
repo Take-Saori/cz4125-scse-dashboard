@@ -3,5 +3,5 @@ import pandas as pd
 import os
 
 
-df = pd.read_csv('data/updated_csv.csv')
+df = pd.read_csv('updated_csv.csv')
 df.head()
