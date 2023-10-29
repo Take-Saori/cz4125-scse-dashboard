@@ -22,6 +22,10 @@ from streamlit.hello.utils import show_code
 
 def animation_demo() -> None:
 
+    st.image(
+            "https://s3-us-west-2.amazonaws.com/uw-s3-cdn/wp-content/uploads/sites/6/2017/11/04133712/waterfall.jpg",
+            width=400, # Manually Adjust the width of the image as per requirement
+        )
     # Interactive Streamlit elements, like these sliders, return their value.
     # This gives you an extremely simple interaction model.
     iterations = st.sidebar.slider("Level of detail", 2, 20, 10, 1)
