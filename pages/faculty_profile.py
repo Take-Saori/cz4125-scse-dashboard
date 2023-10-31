@@ -1,16 +1,38 @@
 import streamlit as st
 from urllib.parse import urlparse, ParseResult
 import ast
+import pandas as pd
+from datetime import datetime
+
+import functions.openalex_api_utils as api_utils
+
     
 def link_button(display_string, link, use_container_width=False):
     # If link non nan,
-    if not isinstance(link, float):
+    if isinstance(link, str):
         st.link_button(display_string, link, use_container_width=use_container_width)
     # Else if link not available,
     else: 
         st.link_button(display_string, '', disabled=True, use_container_width=use_container_width)
 
+def convert_to_alphabet_date(input_date):
+    try:
+        # Convert the string to a datetime object
+        date_object = datetime.strptime(input_date, "%Y-%m-%dT%H:%M:%S.%f")
+
+    except:
+        # Convert the string to a datetime object
+        date_object = datetime.strptime(input_date, "%Y-%m-%d")
+
+    # Format the date in the desired format (DD MM YYYY)
+    formatted_date = date_object.strftime("%d %B %Y")
+
+    return formatted_date
+
+
+
 st.title("Faculty Profile")
+st.write('---')  # Add a separator
 
 # If clicked on 'View profile'
 if st.session_state.selected_faculty is not None:
@@ -22,79 +44,148 @@ if st.session_state.selected_faculty is not None:
         st.image(faculty_detail['img_link'], width=200)
 
     with col2:
-        st.write(f'Name: {faculty_detail["Name"]}')
+        st.subheader(faculty_detail["Name"])
         st.write(f'Email: {faculty_detail["Email"]}')
 
     with col3:
         pass
 
-    tab1, tab2, tab3 = st.tabs(["Cat", "Dog", "External Links"])
+    tab1, tab2, tab3 = st.tabs(["Interests", "Publications", "External Links"])
 
-    with tab1:
-        st.header("A cat")
-        st.image("https://static.streamlit.io/examples/cat.jpg", width=200)
+    faculty_api_id, retrieve_method = api_utils.get_api_id_and_method(faculty_detail)
+    if retrieve_method:
+        faculty_info = api_utils.get_author_stats(faculty_detail, faculty_api_id)
 
-    with tab2:
-        st.header("A dog")
-        st.image("https://static.streamlit.io/examples/dog.jpg", width=200)
+        with tab2:
+            st.write(f'Last updated: {str(convert_to_alphabet_date(faculty_info["updated_date"]))}')
+            st.write('---')  # Add a separator
 
-    with tab3:
+            st.subheader('No. of works and citations in past 10 years')
 
-        st.write('---')  # Add a separator
+            col1, col2 = st.columns([2,1])
 
-        col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                pub_stats_df = pd.DataFrame(faculty_info['counts_by_year']).sort_values(by='year')
+                pub_stats_df['year'] = pub_stats_df['year'].astype(str).str.replace(',', '')
+                pub_stats_df.rename(columns={'year': 'Year', 'works_count': 'No. of works', 'cited_by_count': 'No. of citations'},
+                                    inplace=True)
+                st.line_chart(pub_stats_df,
+                            x="Year", y=["No. of works", "No. of citations"], color=["#FF0000", "#0000FF"])
+            with col2:
+                st.markdown(f'h index: {str(faculty_info["h_index"])}',
+                            help='The h-index is calculated by counting the number of publications \
+                                    for which an author has been cited by other authors at least that same \
+                                    number of times. For instance, an h-index of 17 means that the scientist \
+                                    has published at least 17 papers that have each been cited at least 17 times.\
+                                    \n(Extracted from: https://mdanderson.libanswers.com/faq/26221#:~:text=The%20h%2Dindex%20is%20calculated,cited%20at%20least%2017%20times.)')
+                st.markdown(f'i-10 index: {str(faculty_info["i10_index"])}',
+                            help='The i-10 index indicates the number of academic publications an author has \
+                                written that have been cited by at least 10 sources.\
+                                \n(Extracted from: https://en.wikipedia.org/wiki/Author-level_metrics)')
+                st.markdown(f'Total no. of citations: {str(int(faculty_detail["citations_all_num"]))}',
+                            help='The total number of times the works of this faculty\'s is cited by others.')
 
-        with col1:
-            link_button('DR-NTU Link', faculty_detail['dr_ntu_link'], True)
+            st.write('---')  # Add a separator
+            st.subheader('Most 10 recent works')
+            pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(faculty_api_id, 10,\
+                                                                  sort_by=['publication_date'],\
+                                                                  sort_direction='desc')
+            for i in range(len(pub_list)):
+                st.write(f'{i+1}. Title: {pub_list[i]["title"]}')
+                st.write(f'Published date: {convert_to_alphabet_date(pub_list[i]["publication_date"])}')
+                
+                if 'locations' in pub_list[i]:
+                    if len(pub_list[i]['locations']) > 0:
+                        for j in range(len(pub_list[i]['locations'])):
+                            if 'source' in pub_list[i]['locations'][j]:
+                                if pub_list[i]['locations'][j]["source"]:
+                                    if j == 0:
+                                        st.write('Published in:')
+                                    st.write(pub_list[i]['locations'][j]["source"]["display_name"])
 
-        with col2:
-            link_button('ORCID Link', faculty_detail['orcid_link'], True)
+            st.write('---')  # Add a separator
+            st.subheader('Most cited works')
 
-        with col3:
-            link_button('dblp Link', faculty_detail['dblp_link'], True)
 
-        with col4:
-            link_button('Google Scholar Link', faculty_detail['google_scholar_link'], True)
+        with tab1:
+            st.write(f'Last updated: {str(convert_to_alphabet_date(faculty_info["updated_date"]))}')
+            st.write('---')  # Add a separator
 
-        st.write('---')  # Add a separator
-        
-        if not isinstance(st.session_state.selected_faculty['website_link'], float):
-            weblinks = ast.literal_eval(st.session_state.selected_faculty['website_link'])
+            col1, col2 = st.columns(2)
 
-            # If other websites available, 
-            if len(weblinks) > 0:
-                st.write('Other websites:')
-                i = 0
-                while i < len(weblinks):
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        base_link = '.'.join(urlparse(weblinks[i]).netloc.split('.')[1:])
-                        st.link_button(base_link, weblinks[i], use_container_width=True)
-                        i+=1
+            with col1:
+                # If there are tags from DR-NTU site
+                if not isinstance(faculty_detail["Interests"], float):
+                    st.subheader('Interests')
+                    interests_list = ast.literal_eval(st.session_state.selected_faculty['Interests'])
+                    for interest in interests_list:
+                        st.write(interest)
 
-                    with col2:
-                        if i < len(weblinks):
+            with col2:
+                # If there are tags from the api, 
+                if len(faculty_info['tags']) > 0:
+                    st.subheader(f'Top topics based on {faculty_detail["Name"]} works')
+                    for i in range(len(faculty_info['tags'])):
+                        st.write(f'{i+1}. {faculty_info["tags"][i]["display_name"]}')
+
+
+        with tab3:
+
+            st.write('---')  # Add a separator
+
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                link_button('DR-NTU Link', faculty_detail['dr_ntu_link'], True)
+
+            with col2:
+                link_button('ORCID Link', faculty_detail['orcid_link'], True)
+
+            with col3:
+                link_button('dblp Link', faculty_detail['dblp_link'], True)
+
+            with col4:
+                link_button('Google Scholar Link', faculty_detail['google_scholar_link'], True)
+
+            st.write('---')  # Add a separator
+            
+            if not isinstance(st.session_state.selected_faculty['website_link'], float):
+                weblinks = ast.literal_eval(st.session_state.selected_faculty['website_link'])
+
+                # If other websites available, 
+                if len(weblinks) > 0:
+                    st.write('Other websites:')
+                    i = 0
+                    while i < len(weblinks):
+                        col1, col2, col3, col4 = st.columns(4)
+                        with col1:
                             base_link = '.'.join(urlparse(weblinks[i]).netloc.split('.')[1:])
                             st.link_button(base_link, weblinks[i], use_container_width=True)
                             i+=1
-                        else:
-                            break
 
-                    with col3:
-                        if i < len(weblinks):
-                            base_link = '.'.join(urlparse(weblinks[i]).netloc.split('.')[1:])
-                            st.link_button(base_link, weblinks[i], use_container_width=True)
-                            i+=1
-                        else:
-                            break
+                        with col2:
+                            if i < len(weblinks):
+                                base_link = '.'.join(urlparse(weblinks[i]).netloc.split('.')[1:])
+                                st.link_button(base_link, weblinks[i], use_container_width=True)
+                                i+=1
+                            else:
+                                break
 
-                    with col4:
-                        if i < len(weblinks):
-                            base_link = '.'.join(urlparse(weblinks[i]).netloc.split('.')[1:])
-                            st.link_button(base_link, weblinks[i], use_container_width=True)
-                            i+=1
-                        else:
-                            break
+                        with col3:
+                            if i < len(weblinks):
+                                base_link = '.'.join(urlparse(weblinks[i]).netloc.split('.')[1:])
+                                st.link_button(base_link, weblinks[i], use_container_width=True)
+                                i+=1
+                            else:
+                                break
+
+                        with col4:
+                            if i < len(weblinks):
+                                base_link = '.'.join(urlparse(weblinks[i]).netloc.split('.')[1:])
+                                st.link_button(base_link, weblinks[i], use_container_width=True)
+                                i+=1
+                            else:
+                                break
 
 # if did not click on view profile and got to profile page
 else:
