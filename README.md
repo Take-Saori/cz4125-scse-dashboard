@@ -1,7 +1,25 @@
-# Welcome to streamlit
+# Instructions to run app
 
-This is the app you get when you run `streamlit hello`, extracted as its own app.
-
-Edit [Hello.py](./Hello.py) to customize this app to your heart's desire. ❤️
-
-Check it out on [Streamlit Community Cloud](https://st-hello-app.streamlit.app/)
+To run the app:
+1. Git clone this repo.
+2. Navigate into the project folder.
+```
+cd cz4125-scse-dashboard
+```
+3. Create Python environment 
+```
+pip install virtualenv
+virtualenv pyenv
+```
+4. Start Python env
+```
+pyenv\Scripts\activate
+```
+5. Download dependencies
+```
+pip install -r /path/to/requirements.txt
+```
+6. Run app
+```
+streamlit run /path/to/repo/Faculty_List.py
+```
