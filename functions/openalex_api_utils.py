@@ -423,3 +423,57 @@ def get_author_pubs_from_OpenAlexAPI(author_id, pub_num, sort_by=[], sort_direct
             pub_dict.pop(key, None)
 
     return pub_list
+
+
+def get_collab_info(faculty_id, faculty_pub_list):
+    """
+    Return list of authors who collaborated with a faculty for publication.
+    (The faculty themself will not be included in this list.)
+    The list will be in this format (and will refer to this list as result_list):
+    [collab_author_name, collab_author_api_id, is_scse, pub_id_list, collab_count]
+
+    - collab_author_name (string) will be the name of the collaborated author.
+    - collab_author_api_id (string) is the OpenAlex API id of the collaborated author.
+    - pub_id_list ( List(string) ) is the list of publication id (of OpenAlex API) that the author has collaborated with the faculty.
+    - collab_count (int) is the no. of times the author has collaborated with this faculty.
+
+    Input:
+    - faculty_id (string): Faculty's API id.
+    - faculty_pub_list ( List(string) ): List of publication details of a faculty.
+
+    Output:
+    - sorted_result ( List(List(string)) ): The list that contains a result_list for each collaborated authors.
+    """
+    
+    # Dictionary to store the all collaborated author's info
+    author_data = {}
+
+    for data in faculty_pub_list:
+        # Get the 'id' and 'display_name' of the author
+        author_id = data['authorships'][0]['author']['id'].split('https://openalex.org/')[1]
+        author_name = data['authorships'][0]['author']['display_name']
+    
+        # Get the 'id' of the work
+        work_id = data['id'].split('https://openalex.org/')[1]
+    
+        if author_id == faculty_id:
+            continue
+    
+        # Check if the author_id is already in the author_data dictionary
+        if author_id in author_data:
+            # Append the work_id to the existing list
+            author_data[author_id][2].append(work_id)
+        else:
+            # Create a new entry for the author
+            author_data[author_id] = [author_name, author_id, [work_id]]
+    
+    # Create the final list with the required format
+    result_list = []
+    for author_id, (author_name, _, work_ids) in author_data.items():
+        result_list.append([author_name, author_id, work_ids, len(work_ids)])
+
+    # Sort list according to the no. of times the author has collaborated with the author (descending),
+    # and alphabetic order of the collaborated author's name
+    sorted_result = sorted(result_list, key=lambda x: (x[3], x[0]), reverse=True)
+
+    return sorted_result
