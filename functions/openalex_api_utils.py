@@ -4,7 +4,7 @@ from urllib.request import urlopen
 from urllib.error import HTTPError
 
 import utils
-import dr_ntu_utils as dr_ntu
+import functions.dr_ntu_utils as dr_ntu
 
 
 def get_api_result(query_url):
@@ -273,3 +273,153 @@ def get_api_id_and_method(selected_faculty):
 
     # If really cannot find faculty, set 'nan' for openAlex_authorID
     return float('nan'), None
+
+
+def get_author_stats(selected_faculty, faculty_api_id):
+    """
+    Return dictionary of selected_faculty from API.
+
+    Input:
+    - selected_faculty (pd.Series): Faculty detail from the csv.
+
+    Output:
+    - info_dict (Dictionary): Dictionary of faculty's detail.
+                              Return None if faculty's API id cannot be retrieved.
+    """
+
+    
+    author_details = get_author_info_from_OpenAlexAPI(selected_faculty['Name'],
+                                                      faculty_api_id,
+                                                      'api_id')
+
+    info_dict = {}
+
+    # Get all tags with score larger than 50
+    tag_list = []
+    for concept in author_details['x_concepts']:
+        # If tag score is higher than 50 and the tag is not at top level
+        if concept['score'] > 50 and not (concept['level'] == 0):
+            tag_list.append(concept)
+            
+    info_dict['tags'] = tag_list
+
+    # Get h_index
+    info_dict['h_index'] = author_details['summary_stats']['h_index']
+
+    # Get i10_index
+    info_dict['i10_index'] = author_details['summary_stats']['i10_index']
+
+    # Get work count and citation count for each year
+    info_dict['counts_by_year'] = author_details['counts_by_year']
+
+    # Get the last update
+    info_dict['updated_date'] = author_details['updated_date']
+
+    # Get the work count
+    info_dict['works_count'] = author_details['works_count']
+
+    return info_dict
+
+
+def get_author_pubs_from_OpenAlexAPI(author_id, pub_num, sort_by=[], sort_direction='asc'):
+    """
+    Return a specified no. of publications' details from a specified author.
+
+    Input:
+    - author_id (string): Unique author ID, from OpenAlex API.
+    - pub_num (int): No. of publications' details to return
+    - sort_by (List(string)): To indicate how to sort the results from the API.
+                              The sorting will be prioritized by the list order.
+                              eg. If ['publication_date', 'display_name'],
+                              then 'publication_date' will be used to sort first, followed by 'display_name'.
+    - sort_direction (string): To indicate to sort the result in ascending or descending.
+                               - If 'desc', sort by descending order.
+                               - Otherwise, sort by ascending order.
+
+    Output:
+    - pub_list ( List(Dict) ): List of publications with each of their details written in dictionary format.
+    """
+    
+    # Keys to remove from each publication details
+    keys_to_remove = [
+        'display_name',
+        'language',
+        'primary_location',
+        'open_access',
+        'countries_distinct_count',
+        'institutions_distinct_count',
+        'corresponding_author_ids',
+        'corresponding_institution_ids',
+        'apc_list',
+        'apc_paid',
+        'has_fulltext',
+        'fulltext_origin',
+        'is_retracted',
+        'is_paratext',
+        'concepts',
+        'mesh',
+        'locations_count',
+        'best_oa_location',
+        'sustainable_development_goals',
+        'grants',
+        'referenced_works_count',
+        'ngrams_url',
+        'abstract_inverted_index',
+        'cited_by_api_url'
+    ]
+
+    pub_list = []
+    
+    query_url = 'https://api.openalex.org/works?filter=author.id:' + author_id
+
+    if not sort_direction == 'desc':
+        sort_direction = ''
+
+    if not len(sort_by) == 0:
+        query_url = query_url + '&sort='
+
+    # Add the sorting requrements to the query API
+    for i in range(len(sort_by)):
+        # If the current sort is not the last element
+        if not i == len(sort_by)-1:
+            query_url = query_url + sort_by[i] + ':' + sort_direction + ','
+        else:
+            query_url = query_url + sort_by[i] + ':' + sort_direction
+
+    # If pub_num is within range of "results per page range limits" given by the API,
+    # request to get all results in one page
+    if 1 <= pub_num <= 200:
+        per_page = pub_num
+    else:
+        per_page = 200
+
+    # Count to track the page number of the results
+    page = 1
+    
+    while (len(pub_list) < pub_num):
+        # Get results from the API
+        try:
+            response = urlopen(query_url + '&per-page=' + str(per_page) + '&page=' + str(page))
+            response_json = json.loads(response.read())
+            
+            # Add the pub details to the list
+            pub_list.extend(response_json['results'])
+    
+            # If all results available from the API is already stored,
+            # stop querying
+            if len(pub_list) == response_json['meta']['count']:
+                break
+            
+            # Else, go to next page
+            page += 1
+
+        # Most likely did too much request, so HTTP 403 Forbidden
+        except:
+            # So stop querying and use only the results that are obtained earlier
+            break
+
+    for pub_dict in pub_list:
+        for key in keys_to_remove:
+            pub_dict.pop(key, None)
+
+    return pub_list
