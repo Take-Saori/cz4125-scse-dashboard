@@ -24,6 +24,7 @@ if 'current_page' not in st.session_state:
 if 'selected_faculty' not in st.session_state:
     st.session_state.selected_faculty = None
 
+
 st.header("Faculty List")
 
 # Sorting options
@@ -95,9 +96,19 @@ for index, row in faculty_page.iterrows():
 
 st.session_state['selected_faculty'] = selected_faculty
 
-# def click_profile(selected_faculty):
-#     switch_page('faculty profile')
 
 # Faculty profile page
 if selected_faculty is not None:
+
+    if 'faculty_api_id' not in st.session_state or not st.session_state.faculty_api_id:
+        st.session_state.faculty_api_id = None
+
+    if 'retrieve_method' not in st.session_state or not st.session_state.retrieve_method:
+        st.session_state.retrieve_method = None
+
+    if 'faculty_info' not in st.session_state or not st.session_state.faculty_info:
+        st.session_state.faculty_info = None
+
+    if 'collab_info' not in st.session_state or not st.session_state.collab_info:
+        st.session_state.collab_info = None
     switch_page('faculty profile')
