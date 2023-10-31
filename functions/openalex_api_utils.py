@@ -452,6 +452,11 @@ def get_collab_info(faculty_id, faculty_pub_list):
         # Get the 'id' and 'display_name' of the author
         author_id = data['authorships'][0]['author']['id'].split('https://openalex.org/')[1]
         author_name = data['authorships'][0]['author']['display_name']
+
+        if 'orcid' in data['authorships'][0]['author']:
+            orcid_id = data['authorships'][0]['author']['orcid']
+        else:
+            orcid_id = None
     
         # Get the 'id' of the work
         work_id = data['id'].split('https://openalex.org/')[1]
@@ -470,10 +475,10 @@ def get_collab_info(faculty_id, faculty_pub_list):
     # Create the final list with the required format
     result_list = []
     for author_id, (author_name, _, work_ids) in author_data.items():
-        result_list.append([author_name, author_id, work_ids, len(work_ids)])
+        result_list.append([author_name, author_id, orcid_id, work_ids, len(work_ids)])
 
     # Sort list according to the no. of times the author has collaborated with the author (descending),
     # and alphabetic order of the collaborated author's name
-    sorted_result = sorted(result_list, key=lambda x: (x[3], x[0]), reverse=True)
+    sorted_result = sorted(result_list, key=lambda x: (x[4], x[0]), reverse=True)
 
     return sorted_result
