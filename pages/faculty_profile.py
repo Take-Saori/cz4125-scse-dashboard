@@ -29,10 +29,7 @@ def convert_to_alphabet_date(input_date):
 
     return formatted_date
 
-def print_top_pubs(faculty_api_id, top_num, sort_by=[]):
-    pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(faculty_api_id, top_num,\
-                                                                  sort_by=sort_by,\
-                                                                  sort_direction='desc')
+def print_pubs(pub_list):
     for i in range(len(pub_list)):
         st.write(f'{i+1}. **{pub_list[i]["title"]}**')
         st.write(f'- Published date: {convert_to_alphabet_date(pub_list[i]["publication_date"])}')
@@ -68,7 +65,7 @@ if st.session_state.selected_faculty is not None:
     with col3:
         pass
 
-    tab1, tab2, tab3 = st.tabs(["Interests", "Publications", "External Links"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Interests", "Publications", "Collaborated Authors", "External Links"])
 
     faculty_api_id, retrieve_method = api_utils.get_api_id_and_method(faculty_detail)
     if retrieve_method:
@@ -105,11 +102,17 @@ if st.session_state.selected_faculty is not None:
 
             st.write('---')  # Add a separator
             st.subheader('Top 10 recent works')
-            print_top_pubs(faculty_api_id, 10, sort_by=['publication_date'])
+            recent_pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(faculty_api_id, 10,\
+                                                                  sort_by=['publication_date'],\
+                                                                  sort_direction='desc')
+            print_pubs(recent_pub_list)
 
             st.write('---')  # Add a separator
             st.subheader('Top 10 cited works')
-            print_top_pubs(faculty_api_id, 10, sort_by=['cited_by_count'])
+            cited_pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(faculty_api_id, 10,\
+                                                                  sort_by=['cited_by_count'],\
+                                                                  sort_direction='desc')
+            print_pubs(cited_pub_list)
 
         with tab1:
             st.write(f'Last updated: {str(convert_to_alphabet_date(faculty_info["updated_date"]))}')
@@ -132,9 +135,8 @@ if st.session_state.selected_faculty is not None:
                     for i in range(len(faculty_info['tags'])):
                         st.write(f'{i+1}. {faculty_info["tags"][i]["display_name"]}')
 
-
-        with tab3:
-
+        with tab4:
+            st.write(f'Last updated: {str(convert_to_alphabet_date(faculty_info["updated_date"]))}')
             st.write('---')  # Add a separator
 
             col1, col2, col3, col4 = st.columns(4)
@@ -191,6 +193,49 @@ if st.session_state.selected_faculty is not None:
                             else:
                                 break
 
+        with tab3:
+            st.write(f'Last updated: {str(convert_to_alphabet_date(faculty_info["updated_date"]))}')
+            st.write('---')  # Add a separator
+
+            st.subheader('Top 10 Collaborated Authors',
+                         help='These author\'s worked on the same publication with faculty. These are the top 10\
+                            authors who collaborated with the faculty the most in the recent works (the most 50 \
+                            recent works).')
+            
+            collab_info = api_utils.get_collab_info(faculty_api_id,
+                                                    api_utils.get_author_pubs_from_OpenAlexAPI(faculty_api_id, 50,\
+                                                                                                sort_by=['publication_date'],\
+                                                                                                sort_direction='desc')
+                                                    )
+            for i in range(len(collab_info)):
+                st.write(f'{i+1}. {collab_info[i][0]}')
+                st.write(f'- Number of times collaborated: {collab_info[i][3]}')
+                with st.expander("Collaborated works"):
+                    for j in range(len(collab_info[i][2])):
+                        # Get name of work
+                        query_url = 'https://api.openalex.org/works/' + collab_info[i][2][j]
+                        collab_work_details = api_utils.get_api_result(query_url)
+                        st.write(f'{j+1}. {collab_work_details["title"]}')
+                        st.write(f'- Published date: {convert_to_alphabet_date(collab_work_details["publication_date"])}')
+                        st.write(f'- No. of citations: {collab_work_details["cited_by_count"]}')
+                        
+                        if 'locations' in collab_work_details:
+                            if len(collab_work_details['locations']) > 0:
+                                for j in range(len(collab_work_details['locations'])):
+                                    if 'source' in collab_work_details['locations'][j]:
+                                        if collab_work_details['locations'][j]["source"]:
+                                            if j == 0:
+                                                st.write('- Published in:')
+                                            st.write(f'----- {collab_work_details["locations"][j]["source"]["display_name"]}')
+                        st.text('')
+            st.text('')
+            
+
+
+
+
+            
+            
 # if did not click on view profile and got to profile page
 else:
     st.error('Please select \'View Profile\' button in the Faculty List page to view faculty\'s details.')
