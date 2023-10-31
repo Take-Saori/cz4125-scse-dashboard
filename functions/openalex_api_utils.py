@@ -2,8 +2,9 @@ import json
 import urllib
 from urllib.request import urlopen
 from urllib.error import HTTPError
+from collections import Counter
 
-import utils
+import functions.utils as utils
 import functions.dr_ntu_utils as dr_ntu
 
 
@@ -482,3 +483,40 @@ def get_collab_info(faculty_id, faculty_pub_list):
     sorted_result = sorted(result_list, key=lambda x: (x[4], x[0]), reverse=True)
 
     return sorted_result
+
+
+def get_journal_frequency(faculty_pub_list):
+    """
+    Return list of tuples that contains the name of journal and the frequency of the journal appearing in faculty_pub_list.
+    The tuples will be sorted by the frequency in descending order, then alphabetic order by the journal name.
+
+    Input:
+    - faculty_pub_list ( List(string) ): List of publication details of a faculty.
+
+    Output:
+    - sorted_journal_counts ( List( tuple(string) )): List of tuples containing the name of journal and the frequency of it.
+                                                      It will be in the form of:
+                                                      [ (journal_1_name, journal_1_frequency),  (journal_2_name, journal_2_frequency), ...]
+
+    """
+
+    journal_counts = Counter()
+
+    for entry in faculty_pub_list:
+        locations = entry.get('locations', [])
+        for location in locations:
+            source = location.get('source')
+            if source:
+                source_type = source.get('type')
+                if source_type == 'journal':
+                    journal_name = source.get('display_name')
+                    if journal_name:
+                        journal_counts[journal_name] += 1
+
+    # Sort the result by frequency (descending) and then by journal name (ascending)
+    sorted_journal_counts = sorted(
+        journal_counts.items(),
+        key=lambda x: (-x[1], x[0])
+    )
+
+    return sorted_journal_counts
