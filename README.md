@@ -2,6 +2,9 @@
 
 To run the app:
 1. Git clone this repo.
+```
+git clone https://github.com/Take-Saori/cz4125-scse-dashboard.git
+```
 2. Navigate into the project folder.
 ```
 cd cz4125-scse-dashboard
