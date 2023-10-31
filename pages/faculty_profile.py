@@ -43,14 +43,16 @@ def print_pubs(pub_list):
                             if j == 0:
                                 st.write('- Published in:')
                             st.write(f'----- {pub_list[i]["locations"][j]["source"]["display_name"]}')
+        if isinstance(pub_list[i]["doi"], str):
+            st.link_button('View Publication', pub_list[i]["doi"])
         st.text('')
-
 
 st.title("Faculty Profile")
 st.write('---')  # Add a separator
 
 # If clicked on 'View profile'
 if st.session_state.selected_faculty is not None:
+
     faculty_detail = st.session_state.selected_faculty
 
     col1, col2, col3 = st.columns([1,1,1])  # Divide the row into three columns
@@ -67,12 +69,17 @@ if st.session_state.selected_faculty is not None:
 
     tab1, tab2, tab3, tab4 = st.tabs(["Interests", "Publications", "Collaborated Authors", "External Links"])
 
-    faculty_api_id, retrieve_method = api_utils.get_api_id_and_method(faculty_detail)
-    if retrieve_method:
-        faculty_info = api_utils.get_author_stats(faculty_detail, faculty_api_id)
+    if not st.session_state.faculty_api_id:
+        faculty_api_id, retrieve_method = api_utils.get_api_id_and_method(faculty_detail)
+        st.session_state.faculty_api_id = faculty_api_id
+        st.session_state.retrieve_method = retrieve_method
+
+    if st.session_state.retrieve_method:
+        if not st.session_state.faculty_info:
+            st.session_state.faculty_info = api_utils.get_author_stats(faculty_detail, st.session_state.faculty_api_id)
 
         with tab2:
-            st.write(f'Last updated: {str(convert_to_alphabet_date(faculty_info["updated_date"]))}')
+            st.write(f'Last updated: {str(convert_to_alphabet_date(st.session_state.faculty_info["updated_date"]))}')
             st.write('---')  # Add a separator
 
             st.subheader('No. of works and citations in past 10 years')
@@ -80,20 +87,20 @@ if st.session_state.selected_faculty is not None:
             col1, col2 = st.columns([2,1])
 
             with col1:
-                pub_stats_df = pd.DataFrame(faculty_info['counts_by_year']).sort_values(by='year')
+                pub_stats_df = pd.DataFrame(st.session_state.faculty_info['counts_by_year']).sort_values(by='year')
                 pub_stats_df['year'] = pub_stats_df['year'].astype(str).str.replace(',', '')
                 pub_stats_df.rename(columns={'year': 'Year', 'works_count': 'No. of works', 'cited_by_count': 'No. of citations'},
                                     inplace=True)
                 st.line_chart(pub_stats_df,
                             x="Year", y=["No. of works", "No. of citations"], color=["#FF0000", "#0000FF"])
             with col2:
-                st.markdown(f'h index: {str(faculty_info["h_index"])}',
+                st.markdown(f'h index: {str(st.session_state.faculty_info["h_index"])}',
                             help='The h-index is calculated by counting the number of publications \
                                     for which an author has been cited by other authors at least that same \
                                     number of times. For instance, an h-index of 17 means that the scientist \
                                     has published at least 17 papers that have each been cited at least 17 times.\
                                     \n(Extracted from: https://mdanderson.libanswers.com/faq/26221#:~:text=The%20h%2Dindex%20is%20calculated,cited%20at%20least%2017%20times.)')
-                st.markdown(f'i-10 index: {str(faculty_info["i10_index"])}',
+                st.markdown(f'i-10 index: {str(st.session_state.faculty_info["i10_index"])}',
                             help='The i-10 index indicates the number of academic publications an author has \
                                 written that have been cited by at least 10 sources.\
                                 \n(Extracted from: https://en.wikipedia.org/wiki/Author-level_metrics)')
@@ -102,20 +109,20 @@ if st.session_state.selected_faculty is not None:
 
             st.write('---')  # Add a separator
             st.subheader('Top 10 recent works')
-            recent_pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(faculty_api_id, 10,\
+            recent_pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(st.session_state.faculty_api_id, 10,\
                                                                   sort_by=['publication_date'],\
                                                                   sort_direction='desc')
             print_pubs(recent_pub_list)
 
             st.write('---')  # Add a separator
             st.subheader('Top 10 cited works')
-            cited_pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(faculty_api_id, 10,\
+            cited_pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(st.session_state.faculty_api_id, 10,\
                                                                   sort_by=['cited_by_count'],\
                                                                   sort_direction='desc')
             print_pubs(cited_pub_list)
 
         with tab1:
-            st.write(f'Last updated: {str(convert_to_alphabet_date(faculty_info["updated_date"]))}')
+            st.write(f'Last updated: {str(convert_to_alphabet_date(st.session_state.faculty_info["updated_date"]))}')
             st.write('---')  # Add a separator
 
             col1, col2 = st.columns(2)
@@ -130,13 +137,13 @@ if st.session_state.selected_faculty is not None:
 
             with col2:
                 # If there are tags from the api, 
-                if len(faculty_info['tags']) > 0:
+                if len(st.session_state.faculty_info['tags']) > 0:
                     st.subheader(f'Top topics based on {faculty_detail["Name"]} works')
-                    for i in range(len(faculty_info['tags'])):
-                        st.write(f'{i+1}. {faculty_info["tags"][i]["display_name"]}')
+                    for i in range(len(st.session_state.faculty_info['tags'])):
+                        st.write(f'{i+1}. {st.session_state.faculty_info["tags"][i]["display_name"]}')
 
         with tab4:
-            st.write(f'Last updated: {str(convert_to_alphabet_date(faculty_info["updated_date"]))}')
+            st.write(f'Last updated: {str(convert_to_alphabet_date(st.session_state.faculty_info["updated_date"]))}')
             st.write('---')  # Add a separator
 
             col1, col2, col3, col4 = st.columns(4)
@@ -194,28 +201,30 @@ if st.session_state.selected_faculty is not None:
                                 break
 
         with tab3:
-            st.write(f'Last updated: {str(convert_to_alphabet_date(faculty_info["updated_date"]))}')
+            st.write(f'Last updated: {str(convert_to_alphabet_date(st.session_state.faculty_info["updated_date"]))}')
             st.write('---')  # Add a separator
 
             st.subheader('Top 10 Collaborated Authors',
                          help='These author\'s worked on the same publication with faculty. These are the top 10\
                             authors who collaborated with the faculty the most in the recent works (the most 50 \
                             recent works).')
-            
-            collab_info = api_utils.get_collab_info(faculty_api_id,
-                                                    api_utils.get_author_pubs_from_OpenAlexAPI(faculty_api_id, 50,\
-                                                                                                sort_by=['publication_date'],\
-                                                                                                sort_direction='desc')
-                                                    )
-            for i in range(len(collab_info)):
-                st.write(f'{i+1}. {collab_info[i][0]}')
-                st.write(f'- Number of times collaborated: {collab_info[i][3]}')
+            if not st.session_state.collab_info:
+                st.session_state.collab_info = api_utils.get_collab_info(st.session_state.faculty_api_id,
+                                                        api_utils.get_author_pubs_from_OpenAlexAPI(st.session_state.faculty_api_id, 50,\
+                                                                                                    sort_by=['publication_date'],\
+                                                                                                    sort_direction='desc')
+                                                                        )
+            for i in range(10):
+                st.write(f'{i+1}. {st.session_state.collab_info[i][0]}')
+                st.write(f'- Number of times collaborated: {st.session_state.collab_info[i][4]}')
+                if st.session_state.collab_info[i][2]:
+                    st.link_button('ORCID Link', st.session_state.collab_info[i][2])
                 with st.expander("Collaborated works"):
-                    for j in range(len(collab_info[i][2])):
+                    for j in range(len(st.session_state.collab_info[i][3])):
                         # Get name of work
-                        query_url = 'https://api.openalex.org/works/' + collab_info[i][2][j]
+                        query_url = 'https://api.openalex.org/works/' + st.session_state.collab_info[i][3][j]
                         collab_work_details = api_utils.get_api_result(query_url)
-                        st.write(f'{j+1}. {collab_work_details["title"]}')
+                        st.write(f'{j+1}. **{collab_work_details["title"]}**')
                         st.write(f'- Published date: {convert_to_alphabet_date(collab_work_details["publication_date"])}')
                         st.write(f'- No. of citations: {collab_work_details["cited_by_count"]}')
                         
@@ -227,6 +236,8 @@ if st.session_state.selected_faculty is not None:
                                             if j == 0:
                                                 st.write('- Published in:')
                                             st.write(f'----- {collab_work_details["locations"][j]["source"]["display_name"]}')
+                        if isinstance(collab_work_details["doi"], str):
+                            st.link_button('View Publication', collab_work_details["doi"])
                         st.text('')
             st.text('')
             
