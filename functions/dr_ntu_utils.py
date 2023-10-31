@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import requests
 import re
 
-import utils
+from functions import utils
 
 def get_research_interest_from_drNTU(drNTU_link):
     """
