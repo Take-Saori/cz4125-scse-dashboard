@@ -217,14 +217,16 @@ if st.session_state.selected_faculty is not None:
             max_index = min(10, len(st.session_state.collab_info))
             for i in range(max_index):
                 st.write(f'{i+1}. **{st.session_state.collab_info[i][0]}**')
-                st.write(f'- Number of times collaborated: {st.session_state.collab_info[i][4]}')
+                st.write(f'- Number of times collaborated: {st.session_state.collab_info[i][5]}')
+                if st.session_state.collab_info[i][3]:
+                    st.write('- Institution: ', st.session_state.collab_info[i][3])
                 if st.session_state.collab_info[i][2]:
                     st.link_button('ORCID Link', st.session_state.collab_info[i][2])
                 if st.button('Load collaborated works', key=f'{st.session_state.collab_info[i][1]}'):
                     with st.expander("Collaborated works"):
-                        for j in range(len(st.session_state.collab_info[i][3])):
+                        for j in range(len(st.session_state.collab_info[i][4])):
                             # Get name of work
-                            query_url = 'https://api.openalex.org/works/' + st.session_state.collab_info[i][3][j]
+                            query_url = 'https://api.openalex.org/works/' + st.session_state.collab_info[i][4][j]
                             collab_work_details = api_utils.get_api_result(query_url)
                             st.write(f'{j+1}. **{collab_work_details["title"]}**')
                             st.write(f'- Published date: {convert_to_alphabet_date(collab_work_details["publication_date"])}')
