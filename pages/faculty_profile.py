@@ -1,5 +1,5 @@
 import streamlit as st
-from urllib.parse import urlparse, ParseResult
+from urllib.parse import urlparse
 import ast
 import pandas as pd
 from datetime import datetime
@@ -67,7 +67,7 @@ if st.session_state.selected_faculty is not None:
     with col3:
         pass
 
-    tab1, tab2, tab3, tab4 = st.tabs(["Interests", "Publications", "Collaborated Authors", "External Links"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Interests", "Publications", "Collaborated Authors", "Journals Featured in", "External Links"])
 
     if not st.session_state.faculty_api_id:
         faculty_api_id, retrieve_method = api_utils.get_api_id_and_method(faculty_detail)
@@ -109,10 +109,10 @@ if st.session_state.selected_faculty is not None:
 
             st.write('---')  # Add a separator
             st.subheader('Top 10 recent works')
-            recent_pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(st.session_state.faculty_api_id, 10,\
+            recent_pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(st.session_state.faculty_api_id, 50,\
                                                                   sort_by=['publication_date'],\
                                                                   sort_direction='desc')
-            print_pubs(recent_pub_list)
+            print_pubs(recent_pub_list[:10])
 
             st.write('---')  # Add a separator
             st.subheader('Top 10 cited works')
@@ -142,7 +142,7 @@ if st.session_state.selected_faculty is not None:
                     for i in range(len(st.session_state.faculty_info['tags'])):
                         st.write(f'{i+1}. {st.session_state.faculty_info["tags"][i]["display_name"]}')
 
-        with tab4:
+        with tab5:
             st.write(f'Last updated: {str(convert_to_alphabet_date(st.session_state.faculty_info["updated_date"]))}')
             st.write('---')  # Add a separator
 
@@ -214,32 +214,67 @@ if st.session_state.selected_faculty is not None:
                                                                                                     sort_by=['publication_date'],\
                                                                                                     sort_direction='desc')
                                                                         )
-            for i in range(10):
-                st.write(f'{i+1}. {st.session_state.collab_info[i][0]}')
+            max_index = min(10, len(st.session_state.collab_info))
+            for i in range(max_index):
+                st.write(f'{i+1}. **{st.session_state.collab_info[i][0]}**')
                 st.write(f'- Number of times collaborated: {st.session_state.collab_info[i][4]}')
                 if st.session_state.collab_info[i][2]:
                     st.link_button('ORCID Link', st.session_state.collab_info[i][2])
-                with st.expander("Collaborated works"):
-                    for j in range(len(st.session_state.collab_info[i][3])):
-                        # Get name of work
-                        query_url = 'https://api.openalex.org/works/' + st.session_state.collab_info[i][3][j]
-                        collab_work_details = api_utils.get_api_result(query_url)
-                        st.write(f'{j+1}. **{collab_work_details["title"]}**')
-                        st.write(f'- Published date: {convert_to_alphabet_date(collab_work_details["publication_date"])}')
-                        st.write(f'- No. of citations: {collab_work_details["cited_by_count"]}')
-                        
-                        if 'locations' in collab_work_details:
-                            if len(collab_work_details['locations']) > 0:
-                                for j in range(len(collab_work_details['locations'])):
-                                    if 'source' in collab_work_details['locations'][j]:
-                                        if collab_work_details['locations'][j]["source"]:
-                                            if j == 0:
-                                                st.write('- Published in:')
-                                            st.write(f'----- {collab_work_details["locations"][j]["source"]["display_name"]}')
-                        if isinstance(collab_work_details["doi"], str):
-                            st.link_button('View Publication', collab_work_details["doi"])
-                        st.text('')
+                if st.button('Load collaborated works', key=f'{st.session_state.collab_info[i][1]}'):
+                    with st.expander("Collaborated works"):
+                        for j in range(len(st.session_state.collab_info[i][3])):
+                            # Get name of work
+                            query_url = 'https://api.openalex.org/works/' + st.session_state.collab_info[i][3][j]
+                            collab_work_details = api_utils.get_api_result(query_url)
+                            st.write(f'{j+1}. **{collab_work_details["title"]}**')
+                            st.write(f'- Published date: {convert_to_alphabet_date(collab_work_details["publication_date"])}')
+                            st.write(f'- No. of citations: {collab_work_details["cited_by_count"]}')
+                            
+                            if 'locations' in collab_work_details:
+                                if len(collab_work_details['locations']) > 0:
+                                    for k in range(len(collab_work_details['locations'])):
+                                        if 'source' in collab_work_details['locations'][k]:
+                                            if collab_work_details['locations'][k]["source"]:
+                                                if k == 0:
+                                                    st.write('- Published in:')
+                                                st.write(f'----- {collab_work_details["locations"][k]["source"]["display_name"]}')
+                            if isinstance(collab_work_details["doi"], str):
+                                st.link_button('View Publication', collab_work_details["doi"])
+                            st.text('')
             st.text('')
+
+        with tab4:
+            st.write(f'Last updated: {str(convert_to_alphabet_date(st.session_state.faculty_info["updated_date"]))}')
+            st.write('---')  # Add a separator
+            st.subheader(f"Journals that featured {faculty_detail['Name']}'s work",
+                         help='Calculated using the most recent 50 works.')
+            st.write('---')  # Add a separator
+            journal_name_count = api_utils.get_journal_frequency(recent_pub_list)
+
+            journal_df = pd.read_csv('journal_ranking_data.csv')
+            all_journal_list = list(journal_df['Title'])
+
+            for i in range(len(journal_name_count)):
+                name = journal_name_count[i][0]
+                count = journal_name_count[i][1]
+                st.write(f'{i+1}. **{name}**')
+                st.write(f'- Number of times featured: {count}')
+                if name in all_journal_list:
+                    name_index = all_journal_list.index(name)
+                    rank = journal_df['SJR-index'][name_index]
+                    quartile = journal_df['Best Quartile'][name_index]
+                    publisher = journal_df['Publisher'][name_index]
+                    st.markdown(f'- SJR Index: {rank}',
+                            help='The SJR is an index of weighted citations per article over a period of three years.\
+                                \n(Extracted from: https://academia.stackexchange.com/a/116470)')
+                    st.markdown(f'- Quartile: {quartile}',
+                            help='Q1 to Q4 refer to journal ranking quartiles within a subdiscipline using the SJR citation index.\
+                                \nThus, a first quartile journal (i.e., Q1) has an SJR in the top 25% of journals for at least one of its classified subdisciplines.\
+                                \n(Extracted from: https://academia.stackexchange.com/a/116470)')
+                    
+                    st.markdown(f'- Publisher: {publisher}')
+                st.write('---')  # Add a separator
+
             
 
 
