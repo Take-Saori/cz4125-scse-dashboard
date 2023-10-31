@@ -29,6 +29,24 @@ def convert_to_alphabet_date(input_date):
 
     return formatted_date
 
+def print_top_pubs(faculty_api_id, top_num, sort_by=[]):
+    pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(faculty_api_id, top_num,\
+                                                                  sort_by=sort_by,\
+                                                                  sort_direction='desc')
+    for i in range(len(pub_list)):
+        st.write(f'{i+1}. **{pub_list[i]["title"]}**')
+        st.write(f'- Published date: {convert_to_alphabet_date(pub_list[i]["publication_date"])}')
+        st.write(f'- No. of citations: {pub_list[i]["cited_by_count"]}')
+        
+        if 'locations' in pub_list[i]:
+            if len(pub_list[i]['locations']) > 0:
+                for j in range(len(pub_list[i]['locations'])):
+                    if 'source' in pub_list[i]['locations'][j]:
+                        if pub_list[i]['locations'][j]["source"]:
+                            if j == 0:
+                                st.write('- Published in:')
+                            st.write(f'----- {pub_list[i]["locations"][j]["source"]["display_name"]}')
+        st.text('')
 
 
 st.title("Faculty Profile")
@@ -86,26 +104,12 @@ if st.session_state.selected_faculty is not None:
                             help='The total number of times the works of this faculty\'s is cited by others.')
 
             st.write('---')  # Add a separator
-            st.subheader('Most 10 recent works')
-            pub_list = api_utils.get_author_pubs_from_OpenAlexAPI(faculty_api_id, 10,\
-                                                                  sort_by=['publication_date'],\
-                                                                  sort_direction='desc')
-            for i in range(len(pub_list)):
-                st.write(f'{i+1}. Title: {pub_list[i]["title"]}')
-                st.write(f'Published date: {convert_to_alphabet_date(pub_list[i]["publication_date"])}')
-                
-                if 'locations' in pub_list[i]:
-                    if len(pub_list[i]['locations']) > 0:
-                        for j in range(len(pub_list[i]['locations'])):
-                            if 'source' in pub_list[i]['locations'][j]:
-                                if pub_list[i]['locations'][j]["source"]:
-                                    if j == 0:
-                                        st.write('Published in:')
-                                    st.write(pub_list[i]['locations'][j]["source"]["display_name"])
+            st.subheader('Top 10 recent works')
+            print_top_pubs(faculty_api_id, 10, sort_by=['publication_date'])
 
             st.write('---')  # Add a separator
-            st.subheader('Most cited works')
-
+            st.subheader('Top 10 cited works')
+            print_top_pubs(faculty_api_id, 10, sort_by=['cited_by_count'])
 
         with tab1:
             st.write(f'Last updated: {str(convert_to_alphabet_date(faculty_info["updated_date"]))}')
