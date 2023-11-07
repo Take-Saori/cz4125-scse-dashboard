@@ -266,15 +266,18 @@ if st.session_state.selected_faculty is not None:
                     rank = journal_df['SJR-index'][name_index]
                     quartile = journal_df['Best Quartile'][name_index]
                     publisher = journal_df['Publisher'][name_index]
-                    st.markdown(f'- SJR Index: {rank}',
-                            help='The SJR is an index of weighted citations per article over a period of three years.\
-                                \n(Extracted from: https://academia.stackexchange.com/a/116470)')
-                    st.markdown(f'- Quartile: {quartile}',
-                            help='Q1 to Q4 refer to journal ranking quartiles within a subdiscipline using the SJR citation index.\
-                                \nThus, a first quartile journal (i.e., Q1) has an SJR in the top 25% of journals for at least one of its classified subdisciplines.\
-                                \n(Extracted from: https://academia.stackexchange.com/a/116470)')
+                    if isinstance(rank, float):
+                        st.markdown(f'- SJR Index: {rank}',
+                                help='The SJR is an index of weighted citations per article over a period of three years.\
+                                    \n(Extracted from: https://academia.stackexchange.com/a/116470)')
+                    if isinstance(rank, float):
+                        st.markdown(f'- Quartile: {quartile}',
+                                help='Q1 to Q4 refer to journal ranking quartiles within a subdiscipline using the SJR citation index.\
+                                    \nThus, a first quartile journal (i.e., Q1) has an SJR in the top 25% of journals for at least one of its classified subdisciplines.\
+                                    \n(Extracted from: https://academia.stackexchange.com/a/116470)')
                     
-                    st.markdown(f'- Publisher: {publisher}')
+                    if isinstance(publisher, str):
+                        st.markdown(f'- Publisher: {publisher}')
                 st.write('---')  # Add a separator
 
             
