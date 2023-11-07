@@ -7,7 +7,9 @@ from collections import Counter
 import functions.utils as utils
 import functions.dr_ntu_utils as dr_ntu
 
+import streamlit as st
 
+@st.cache_data
 def get_api_result(query_url):
     """
     Return API result by using query_url.
@@ -27,7 +29,7 @@ def get_api_result(query_url):
         # Handle any HTTP error by returning a custom error message
         return {"error": f"HTTP error {e.code}: {e.reason}"}
     
-
+@st.cache_data
 def get_author_info_from_OpenAlexAPI(author_name, keyword, mode):
     """
     Return the dictionary of details of a specified author of the publication with specified doi.
@@ -186,7 +188,7 @@ def get_author_info_from_OpenAlexAPI(author_name, keyword, mode):
         # If no possible candinate
         return []
 
-
+@st.cache_data
 def get_api_id_and_method(selected_faculty):
     """
     Return OpenAlex API id of selected_faculty and the method of retrieval of their details.
@@ -275,7 +277,7 @@ def get_api_id_and_method(selected_faculty):
     # If really cannot find faculty, set 'nan' for openAlex_authorID
     return float('nan'), None
 
-
+@st.cache_data
 def get_author_stats(selected_faculty, faculty_api_id):
     """
     Return dictionary of selected_faculty from API.
@@ -321,7 +323,7 @@ def get_author_stats(selected_faculty, faculty_api_id):
 
     return info_dict
 
-
+@st.cache_data
 def get_author_pubs_from_OpenAlexAPI(author_id, pub_num, sort_by=[], sort_direction='asc'):
     """
     Return a specified no. of publications' details from a specified author.
@@ -425,7 +427,7 @@ def get_author_pubs_from_OpenAlexAPI(author_id, pub_num, sort_by=[], sort_direct
 
     return pub_list
 
-
+@st.cache_data
 def get_collab_info(faculty_id, faculty_pub_list):
     """
     Return list of authors who collaborated with a faculty for publication.
@@ -490,7 +492,7 @@ def get_collab_info(faculty_id, faculty_pub_list):
 
     return sorted_result
 
-
+@st.cache_data
 def get_journal_frequency(faculty_pub_list):
     """
     Return list of tuples that contains the name of journal and the frequency of the journal appearing in faculty_pub_list.

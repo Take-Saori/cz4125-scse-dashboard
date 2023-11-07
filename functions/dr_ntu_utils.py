@@ -5,6 +5,9 @@ import re
 
 from functions import utils
 
+import streamlit as st
+
+@st.cache_data
 def get_research_interest_from_drNTU(drNTU_link):
     """
     Return the list of tags of the researcher in their DR-NTU page.
@@ -93,7 +96,7 @@ def get_cleaned_pub_list(unprocessed_pub_list):
     
     return cleaned_pub_list
 
-
+st.cache_resource
 def get_unprocessed_pub_list(drNTU_link):
     """
     Return publication details from DR-NTU faculty's profile in publication tab.
@@ -120,7 +123,7 @@ def get_unprocessed_pub_list(drNTU_link):
 
     return unprocessed_pub_list
 
-
+@st.cache_data
 def get_doi_list_from_drNTU(drNTU_link):
     """
     Return the list of DOI of all publications written by the researcher, in their DR-NTU page.
