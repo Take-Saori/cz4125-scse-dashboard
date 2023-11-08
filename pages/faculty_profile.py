@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 
 import functions.openalex_api_utils as api_utils
-
+import functions.dr_ntu_utils as ntu_utils
     
 def link_button(display_string, link, use_container_width=False):
     # If link non nan,
@@ -67,7 +67,8 @@ if st.session_state.selected_faculty is not None:
     with col3:
         pass
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Interests", "Publications", "Collaborated Authors", "Journals Featured in", "External Links"])
+    
+    tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs(["Biography", "Interests", "Publications", "Collaborated Authors", "Journals Featured in", "External Links"])
 
     if not st.session_state.faculty_api_id:
         faculty_api_id, retrieve_method = api_utils.get_api_id_and_method(faculty_detail)
@@ -77,6 +78,12 @@ if st.session_state.selected_faculty is not None:
     if st.session_state.retrieve_method:
         if not st.session_state.faculty_info:
             st.session_state.faculty_info = api_utils.get_author_stats(faculty_detail, st.session_state.faculty_api_id)
+
+        with tab0:
+            bio = ntu_utils.get_bio_from_drNTU(faculty_detail['dr_ntu_link'])
+            if bio:
+                st.write(bio)
+
 
         with tab2:
             st.write(f'Last updated: {str(convert_to_alphabet_date(st.session_state.faculty_info["updated_date"]))}')
